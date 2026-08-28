@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Walk of Life - Authentic Thai Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-pink: #ff3b69;
+            --primary-blue: #0284c7;
+            --primary-gold: #fbbf24;
+            --primary-green: #10b981;
+            --primary-red: #ef4444;
+            --bg-dark: #090d16;
+            --hud-glass: rgba(15, 23, 42, 0.94);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Kanit', sans-serif; user-select: none; }
+
+        body {
+            background: #1e1b4b;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            overflow: hidden;
+        }
+
+        /* HD Game Viewport Frame */
+        .game-viewport {
+            position: relative;
+            width: 1080px;
+            height: 640px;
+            background: #0284c7;
+            border: 6px solid #1e293b;
+            border-radius: 28px;
+            box-shadow: 0 30px 70px rgba(0,0,0,0.85);
+            overflow: hidden;
+        }
+
+        /* Background Illustration Art */
+        .town-map-art {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('./assets/calicornia_town_map.jpg') no-repeat center center;
+            background-size: cover; z-index: 1;
+        }
+
+        canvas#gameCanvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2;
+        }
+
+        /* 🎮 1. AUTHENTIC THAI MAIN MENU OVERLAY SCREEN */
+        .main-menu-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('./assets/menu_bg_art.jpg') no-repeat center center;
+            background-size: cover;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .main-menu-screen.hidden { opacity: 0; pointer-events: none; transform: scale(1.05); }
+
+        /* Pager Room Code Widget (Top Left) */
+        .pager-widget {
+            position: absolute; top: 24px; left: 24px;
+            background: #1e293b; border: 3px solid #000; border-radius: 14px; padding: 10px 14px;
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6); cursor: pointer; transition: transform 0.2s;
+        }
+
+        .pager-widget:hover { transform: scale(1.05); }
+        .pager-screen { background: #22c55e; color: #000; font-family: monospace; font-size: 18px; font-weight: 900; padding: 4px 12px; border-radius: 6px; border: 2px solid #000; letter-spacing: 2px; }
+        .pager-label { font-size: 12px; font-weight: 800; color: #94a3b8; }
+
+        /* Discord Stamp (Top Right) */
+        .discord-stamp {
+            position: absolute; top: 24px; right: 24px;
+            background: #5865f2; border: 3px solid #fff; padding: 10px 16px; border-radius: 16px; font-weight: 900; font-size: 14px; color: #fff; display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.5); cursor: pointer;
+        }
+
+        /* Center Paper Banner & Capsule Buttons */
+        .menu-paper-banner {
+            background: rgba(255, 255, 255, 0.95); border: 5px solid #000; border-radius: 28px; padding: 30px 50px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.7); width: 520px;
+        }
+
+        .game-title-logo {
+            font-size: 52px; font-weight: 900; color: #f59e0b; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000; margin-bottom: 20px; letter-spacing: 2px;
+        }
+
+        .btn-capsule {
+            width: 280px; padding: 16px; border-radius: 40px; font-size: 22px; font-weight: 900; color: #fff; border: 3px solid #000; cursor: pointer; margin-bottom: 12px; text-shadow: 0 2px 4px rgba(0,0,0,0.4); box-shadow: 0 8px 15px rgba(0,0,0,0.3); transition: all 0.2s ease; display: flex; justify-content: center; align-items: center;
+        }
+
+        .btn-capsule:hover { transform: scale(1.04); }
+        .btn-pink { background: linear-gradient(135deg, #ff3b69, #e11d48); }
+        .btn-blue { background: linear-gradient(135deg, #38bdf8, #0284c7); }
+
+        /* Map Postcard Setup Preview (Bottom Left) */
+        .postcard-preview {
+            position: absolute; bottom: 24px; left: 24px; background: #fff; border: 3px solid #000; border-radius: 16px; padding: 8px; width: 240px; box-shadow: 0 8px 20px rgba(0,0,0,0.5); transform: rotate(-3deg);
+        }
+
+        .postcard-img { width: 100%; height: 100px; object-fit: cover; border-radius: 10px; }
+        .postcard-title { font-size: 13px; font-weight: 900; color: #000; margin-top: 4px; text-align: center; }
+
+        /* Mode Select Dialog Modal */
+        .mode-dialog {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
+            background: rgba(15, 23, 42, 0.98); border: 4px solid var(--primary-gold); border-radius: 28px; padding: 28px; width: 480px; z-index: 150; opacity: 0; pointer-events: none; transition: all 0.3s ease; box-shadow: 0 25px 60px rgba(0,0,0,0.85); text-align: center;
+        }
+
+        .mode-dialog.active { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
+
+        /* 🎲 2. IN-GAME HUD & OVERLAYS */
+        .top-nav {
+            position: absolute; top: 16px; left: 24px; right: 24px; display: flex; justify-content: space-between; align-items: center; z-index: 10; pointer-events: none;
+        }
+
+        .toast-banner {
+            background: var(--hud-glass); backdrop-filter: blur(10px); border: 2px solid var(--primary-blue); padding: 10px 22px; border-radius: 25px; font-size: 14px; font-weight: 800; color: var(--primary-blue); box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        }
+
+        .hud-wrapper {
+            position: absolute; bottom: 16px; left: 20px; right: 20px; height: 135px; display: flex; justify-content: space-between; align-items: flex-end; z-index: 20; pointer-events: none;
+        }
+
+        .hud-player-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95)); border: 3px solid var(--primary-gold); border-radius: 24px; padding: 12px 18px; display: flex; align-items: center; gap: 16px; width: 440px; box-shadow: 0 12px 30px rgba(0,0,0,0.7); pointer-events: auto;
+        }
+
+        .avatar-portrait-box {
+            width: 85px; height: 85px; border-radius: 20px; border: 3px solid #fff; overflow: hidden; box-shadow: 0 6px 15px rgba(0,0,0,0.4); flex-shrink: 0; background: #000;
+        }
+
+        .avatar-portrait-img { width: 100%; height: 100%; object-fit: cover; }
+        .stats-col { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+        .stats-header-line { display: flex; justify-content: space-between; font-weight: 900; font-size: 15px; }
+
+        .meter-group { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; }
+        .progress-bg-track { flex: 1; height: 12px; background: #1e293b; border-radius: 6px; overflow: hidden; border: 1px solid #475569; }
+        .progress-fill-bar { height: 100%; border-radius: 6px; transition: width 0.4s ease; }
+
+        .hud-clock-box {
+            width: 105px; height: 105px; background: #ffffff; border: 6px solid #1e293b; border-radius: 50%; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 12px 35px rgba(0,0,0,0.7); color: #0f172a; pointer-events: auto;
+        }
+
+        .clock-num { font-size: 22px; font-weight: 900; line-height: 1; }
+        .clock-lbl { font-size: 11px; font-weight: 800; color: #64748b; }
+
+        .hud-notebook-box {
+            background: #fef08a; border: 3px solid #b45309; border-radius: 20px; padding: 12px 18px; color: #78350f; width: 290px; box-shadow: 0 12px 30px rgba(0,0,0,0.7); pointer-events: auto; transform: rotate(-1.5deg);
+        }
+
+        .notebook-hdr { font-size: 14px; font-weight: 900; color: #b45309; text-transform: uppercase; border-bottom: 2px solid #fde047; }
+        .notebook-txt { font-size: 13px; font-weight: 800; margin-top: 4px; }
+
+        /* Building Dialog */
+        .building-dialog {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.85);
+            background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(16px); border: 4px solid var(--primary-gold); border-radius: 28px; padding: 28px; width: 460px; z-index: 50; opacity: 0; pointer-events: none; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 25px 60px rgba(0,0,0,0.85);
+        }
+
+        .building-dialog.active { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
+        .dialog-hdr { font-size: 24px; font-weight: 900; color: var(--primary-gold); display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+        .dialog-sub { font-size: 13px; color: #94a3b8; margin-bottom: 20px; }
+
+        .btn-action-choice {
+            width: 100%; background: #1e293b; color: #fff; border: 2px solid #475569; padding: 14px; border-radius: 16px; font-weight: 800; font-size: 14px; cursor: pointer; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s;
+        }
+
+        .btn-action-choice:hover:not(:disabled) { background: #334155; border-color: var(--primary-gold); transform: translateY(-2px); }
+        .btn-action-choice:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-dialog-exit { background: var(--primary-red); color: #fff; border: none; width: 100%; padding: 12px; border-radius: 14px; font-weight: 900; font-size: 14px; cursor: pointer; margin-top: 6px; }
+
+        /* Victory Screen */
+        .victory-screen-full {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.96); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.4s;
+        }
+        .victory-screen-full.show { opacity: 1; pointer-events: auto; }
+    </style>
+</head>
+<body>
+
+    <div class="game-viewport">
+        <!-- Background Cartoon Illustration Map -->
+        <div class="town-map-art"></div>
+
+        <!-- Interactive Canvas Overlay -->
+        <canvas id="gameCanvas" width="1080" height="640"></canvas>
+
+        <!-- 🎮 1. AUTHENTIC THAI MAIN MENU SCREEN -->
+        <div class="main-menu-screen" id="mainMenuScreen">
+            <!-- Pager Room Code Widget -->
+            <div class="pager-widget" onclick="copyRoomCode()">
+                <div class="pager-screen" id="pagerCodeDisplay">WGNIN9FC</div>
+                <div class="pager-label">📟 คัดลอกรหัสห้องส่งให้เพื่อน</div>
+            </div>
+
+            <!-- Discord Stamp -->
+            <div class="discord-stamp" onclick="alert('เข้าร่วม Discord ของเรา!')">
+                <span>👾 เข้าร่วม Discord</span>
+            </div>
+
+            <!-- Central Paper Banner & Pink/Blue Capsule Buttons -->
+            <div class="menu-paper-banner">
+                <div class="game-title-logo">WALK OF LIFE</div>
+                <button class="btn-capsule btn-pink" onclick="openModeSelect()">เล่น (PLAY)</button>
+                <button class="btn-capsule btn-blue" onclick="alert('เมนูการตั้งค่าเสียงและกราฟิก')">การตั้งค่า</button>
+                <button class="btn-capsule btn-blue" onclick="alert('ออกจากเกม')">ออก</button>
+            </div>
+
+            <!-- Map Postcard Preview -->
+            <div class="postcard-preview">
+                <img src="./assets/calicornia_town_map.jpg" class="postcard-img" alt="Map">
+                <div class="postcard-title">CALICORNIA COAST</div>
+            </div>
+        </div>
+
+        <!-- Mode Select Modal -->
+        <div class="mode-dialog" id="modeDialog">
+            <h2 style="color: var(--primary-gold); font-size: 26px; font-weight: 900; margin-bottom: 16px;">🎮 เลือกโหมดการเล่น</h2>
+            <button class="btn-action-choice" onclick="startSinglePlayerGame()"><span>🤖 เล่นคนเดียวกับบอท (Single Player vs AI)</span></button>
+            <button class="btn-action-choice" onclick="createOnlineRoom()"><span>🌐 สร้างห้องออนไลน์ (Create Room Code)</span></button>
+            <button class="btn-action-choice" onclick="joinOnlineRoom()"><span>🔗 เข้าร่วมห้องเพื่อน (Join Room Code)</span></button>
+            <button class="btn-dialog-exit" onclick="closeModeSelect()">ยกเลิก</button>
+        </div>
+
+        <!-- 🎲 2. IN-GAME HUD & OVERLAYS -->
+        <div class="top-nav">
+            <div class="toast-banner" id="toastDisplay">📍 คลิกเลือกสถานที่บนกระดานเพื่อเดินทางไปทำกิจกรรม</div>
+        </div>
+
+        <!-- Location Action Dialog -->
+        <div class="building-dialog" id="locationDialog">
+            <div class="dialog-hdr" id="dialogTitle">🏠 HOME APARTMENT</div>
+            <div class="dialog-sub" id="dialogDesc">สถานที่พักอาศัยส่วนตัว เติมพลังงาน และซื้อของตกแต่งบ้าน</div>
+            <div id="dialogButtonsList"></div>
+            <button class="btn-dialog-exit" onclick="closeLocationDialog()">เดินกลับออกมา (Close)</button>
+        </div>
+
+        <!-- Walk of Life HUD -->
+        <div class="hud-wrapper">
+            <div class="hud-player-card">
+                <div class="avatar-portrait-box">
+                    <img src="./assets/nova_portrait.jpg" class="avatar-portrait-img" alt="Nova">
+                </div>
+                <div class="stats-col">
+                    <div class="stats-header-line">
+                        <span>NOVA (YOU)</span>
+                        <span style="color: var(--primary-green);" id="cashDisplay">$500</span>
+                    </div>
+
+                    <div class="meter-group">
+                        <span>😊 FUN</span>
+                        <div class="progress-bg-track"><div class="progress-fill-bar" id="happyFillBar" style="width: 80%; background: var(--primary-gold);"></div></div>
+                    </div>
+
+                    <div class="meter-group">
+                        <span>❤️ HEALTH</span>
+                        <div class="progress-bg-track"><div class="progress-fill-bar" id="healthFillBar" style="width: 100%; background: var(--primary-red);"></div></div>
+                    </div>
+
+                    <div class="meter-group">
+                        <span>⚡ ENERGY</span>
+                        <div class="progress-bg-track"><div class="progress-fill-bar" id="energyFillBar" style="width: 100%; background: var(--primary-blue);"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hud-clock-box">
+                <span class="clock-num" id="clockRoundText">01 / 20</span>
+                <span class="clock-lbl">ROUNDS</span>
+            </div>
+
+            <div class="hud-notebook-box">
+                <div class="notebook-hdr">📋 BUY EVERYTHING QUEST</div>
+                <div class="notebook-txt" id="questItemCount">1. ซื้อของแต่งบ้าน 4 ชิ้น (0/4)</div>
+                <div class="notebook-txt" id="questEduTitle">2. สะสมเงิน $1,000 + วุฒิปริญญา</div>
+            </div>
+        </div>
+
+        <!-- Victory Screen -->
+        <div class="victory-screen-full" id="victoryScreen">
+            <h1 style="color: var(--primary-gold); font-size: 40px; margin-bottom: 12px; font-weight: 900;">🏆 สรุปผลการแข่งขัน!</h1>
+            <div id="podiumRankList" style="width: 440px; margin-bottom: 24px;"></div>
+            <button onclick="location.reload()" style="background: var(--primary-green); color: #000; font-weight: 900; border: none; padding: 16px 32px; border-radius: 16px; font-size: 18px; cursor: pointer;">
+                🔄 กลับสู่หน้าเมนูหลัก (Return to Menu)
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+        function initAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+        function playSound(type) {
+            try {
+                initAudio(); if (!audioCtx) return;
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+
+                if (type === 'step') {
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(150, now); osc.frequency.exponentialRampToValueAtTime(80, now + 0.08);
+                    gain.gain.setValueAtTime(0.15, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now); osc.stop(now + 0.08);
+                } else if (type === 'money') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(987.77, now); osc.frequency.setValueAtTime(1318.51, now + 0.08);
+                    gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now); osc.stop(now + 0.25);
+                } else if (type === 'click') {
+                    osc.type = 'square'; osc.frequency.setValueAtTime(400, now);
+                    gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+                    osc.start(now); osc.stop(now + 0.05);
+                } else if (type === 'fanfare') {
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(523.25, now); osc.frequency.setValueAtTime(659.25, now + 0.15);
+                    osc.frequency.setValueAtTime(783.99, now + 0.3); osc.frequency.setValueAtTime(1046.50, now + 0.45);
+                    gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.8);
+                    osc.start(now); osc.stop(now + 0.8);
+                }
+            } catch(e) {}
+        }
+
+        let roomCode = "WGNIN9FC";
+        let round = 1; const maxRounds = 20; let isPlayerTurn = true; let hoveredBuilding = null; let popups = [];
+
+        function copyRoomCode() {
+            playSound('money');
+            navigator.clipboard.writeText(roomCode);
+            alert(`คัดลอกรหัสห้อง ${roomCode} ลง Clipboard เรียบร้อยแล้ว!`);
+        }
+
+        function openModeSelect() { playSound('click'); document.getElementById('modeDialog').classList.add('active'); }
+        function closeModeSelect() { document.getElementById('modeDialog').classList.remove('active'); }
+
+        function startSinglePlayerGame() {
+            playSound('fanfare');
+            closeModeSelect();
+            document.getElementById('mainMenuScreen').classList.add('hidden');
+            updateHUD(); drawCanvas();
+        }
+
+        function createOnlineRoom() {
+            const newCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+            roomCode = newCode;
+            document.getElementById('pagerCodeDisplay').innerText = roomCode;
+            alert(`สร้างห้องออนไลน์สำเร็จ! รหัสห้องของคุณคือ: ${roomCode}`);
+            startSinglePlayerGame();
+        }
+
+        function joinOnlineRoom() {
+            const inputCode = prompt("กรอกรหัสห้องเพื่อน (เช่น WGNIN9FC):");
+            if (inputCode) {
+                alert(`เชื่อมต่อเข้าสู่ห้อง ${inputCode.toUpperCase()} สำเร็จ!`);
+                startSinglePlayerGame();
+            }
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const buildings = [
+            { id: 'gym', name: '🏋️ POWER GYM', x: 445, y: 220, desc: 'ฟิตเนสออกกำลังกาย เพิ่มสุขภาพและความสุข' },
+            { id: 'cluckers', name: '🍗 CHICKEN RESTAURANT', x: 575, y: 290, desc: 'ร้านไก่ทอดแสนอร่อย ทานเติมพลังและความอิ่ม' },
+            { id: 'univ', name: '🎓 CALICORNIA UNIV', x: 740, y: 390, desc: 'มหาวิทยาลัย สมัครเรียนต่อเพิ่มวุฒิปลดล็อกงาน' },
+            { id: 'bank', name: '🐷 PIGGY BANK', x: 540, y: 560, desc: 'ธนาคารหมูออมสิน ฝากเงินและรับดอกเบี้ย' },
+            { id: 'realestate', name: '🔑 REAL ESTATE', x: 650, y: 640, desc: 'สำนักงานอสังหาฯ ซื้อบ้านใหม่เพิ่มคะแนน VP' },
+            { id: 'mart', name: '🛒 MOO MOO MART', x: 860, y: 720, desc: 'ซูเปอร์มาร์เก็ต ซื้ออาหารและเครื่องดื่ม' }
+        ];
+
+        let player = { x: 445, y: 220, targetX: 445, targetY: 220, cash: 500, energy: 100, health: 100, happy: 80, edu: 0, furnitureCount: 0, furnitureVP: 0 };
+        let bots = [
+            { name: "Bot Alex", x: 575, y: 290, targetX: 575, targetY: 290, color: '#ef4444', icon: '🤖', cash: 500, edu: 0, vp: 0 },
+            { name: "Bot Bella", x: 740, y: 390, targetX: 740, targetY: 390, color: '#8b5cf6', icon: '👾', cash: 500, edu: 0, vp: 0 },
+            { name: "Bot Charlie", x: 650, y: 640, targetX: 650, targetY: 640, color: '#10b981', icon: '👽', cash: 500, edu: 0, vp: 0 }
+        ];
+
+        function calculateVP(p) { return Math.max(0, Math.floor((p.cash / 100) + (p.edu * 150) + (p.happy * 2) + (p.furnitureVP || 0))); }
+
+        function drawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            buildings.forEach(b => {
+                const isHovered = (hoveredBuilding === b);
+                if (isHovered) {
+                    ctx.beginPath(); ctx.arc(b.x, b.y, 45, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(251, 191, 36, 0.4)'; ctx.fill();
+                    ctx.lineWidth = 3; ctx.strokeStyle = '#fbbf24'; ctx.stroke();
+                }
+            });
+
+            const dist = Math.hypot(player.targetX - player.x, player.targetY - player.y);
+            if (dist > 1.5) {
+                player.x += (player.targetX - player.x) * 0.12; player.y += (player.targetY - player.y) * 0.12;
+                if (Math.random() < 0.2) playSound('step');
+            }
+
+            ctx.beginPath(); ctx.arc(player.x, player.y, 22, 0, Math.PI * 2); ctx.fillStyle = '#fbbf24'; ctx.fill();
+            ctx.lineWidth = 3; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+            ctx.font = '22px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('👩‍🦱', player.x, player.y);
+
+            for (let i = 0; i < 3; i++) {
+                const bot = bots[i];
+                bot.x += (bot.targetX - bot.x) * 0.12; bot.y += (bot.targetY - bot.y) * 0.12;
+                ctx.beginPath(); ctx.arc(bot.x + 18, bot.y + 12, 16, 0, Math.PI * 2); ctx.fillStyle = bot.color; ctx.fill();
+                ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+                ctx.font = '15px sans-serif'; ctx.fillText(bot.icon, bot.x + 18, bot.y + 12);
+            }
+
+            requestAnimationFrame(drawCanvas);
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
+            hoveredBuilding = buildings.find(b => Math.hypot(b.x - mouseX, b.y - mouseY) < 45);
+            canvas.style.cursor = hoveredBuilding ? 'pointer' : 'default';
+        });
+
+        canvas.addEventListener('click', () => {
+            if (!isPlayerTurn || !hoveredBuilding) return;
+            playSound('click');
+            const targetB = hoveredBuilding; player.targetX = targetB.x; player.targetY = targetB.y;
+            setToast(`เดินมุ่งหน้าไปที่ ${targetB.name}...`);
+            setTimeout(() => { openLocationDialog(targetB); }, 550);
+        });
+
+        function openLocationDialog(b) {
+            document.getElementById('dialogTitle').innerText = b.name;
+            document.getElementById('dialogDesc').innerText = b.desc;
+            const list = document.getElementById('dialogButtonsList'); list.innerHTML = '';
+
+            if (b.id === 'cluckers' || b.id === 'mart') {
+                list.innerHTML = `<button class="btn-action-choice" onclick="doAction('eat')" ${player.cash < 30 ? 'disabled' : ''}><span>🍗 ทานอาหารมื้ออร่อย ($30)</span><small>+10 Health | +15 Fun</small></button>`;
+            } else if (b.id === 'univ') {
+                list.innerHTML = `<button class="btn-action-choice" onclick="doAction('study')" ${player.cash < 350 || player.energy < 35 || player.edu >= 3 ? 'disabled' : ''}><span>🎓 สมัครเรียนต่อปริญญา ($350)</span><small>เพิ่มระดับวุฒิการศึกษา</small></button>`;
+            } else if (b.id === 'gym') {
+                list.innerHTML = `<button class="btn-action-choice" onclick="doAction('gym')" ${player.cash < 50 || player.energy < 20 ? 'disabled' : ''}><span>🏋️ เข้าคอร์สออกกำลังกาย ($50)</span><small>+25 Health | +20 Fun</small></button>`;
+            } else if (b.id === 'realestate') {
+                list.innerHTML = `<button class="btn-action-choice" onclick="doAction('buyFurniture')" ${player.cash < 300 ? 'disabled' : ''}><span>🛋️ ซื้อของแต่งบ้าน ($300)</span><small>+200 Victory Points</small></button>`;
+            } else if (b.id === 'bank') {
+                list.innerHTML = `<button class="btn-action-choice" onclick="doAction('bankDeposit')"><span>🐷 ฝากเงินรับดอกเบี้ย</span><small>+10% ดอกเบี้ยเมื่อจบตา</small></button>`;
+            }
+
+            document.getElementById('locationDialog').classList.add('active');
+        }
+
+        function closeLocationDialog() { document.getElementById('locationDialog').classList.remove('active'); }
+
+        function doAction(type) {
+            closeLocationDialog();
+
+            if (type === 'eat') {
+                player.cash -= 30; player.health = Math.min(100, player.health + 10); player.happy = Math.min(100, player.happy + 15);
+                playSound('money'); setToast("ทานอาหารอร่อย สุขภาพและความสุขเพิ่มขึ้น");
+            } else if (type === 'study') {
+                player.cash -= 350; player.energy -= 35; player.edu++;
+                playSound('fanfare'); setToast("🎓 ยินดีด้วย! คุณเรียนจบสำเร็จการศึกษา");
+            } else if (type === 'gym') {
+                player.cash -= 50; player.energy -= 20; player.health = Math.min(100, player.health + 25); player.happy = Math.min(100, player.happy + 20);
+                setToast("ออกกำลังกายสดชื่น ได้รับสุขภาพและความสุขเพิ่ม");
+            } else if (type === 'buyFurniture') {
+                player.cash -= 300; player.furnitureCount++; player.furnitureVP += 200;
+                playSound('fanfare'); setToast("ซื้อของแต่งบ้านสำเร็จ! (+200 VP)");
+            } else if (type === 'bankDeposit') {
+                const bonus = Math.floor(player.cash * 0.1); player.cash += bonus;
+                playSound('money'); setToast(`ได้รับดอกเบี้ยเงินฝากธนาคาร +$${bonus}`);
+            }
+
+            updateHUD();
+        }
+
+        function updateHUD() {
+            document.getElementById('clockRoundText').innerText = `${round < 10 ? '0' + round : round} / ${maxRounds}`;
+            document.getElementById('cashDisplay').innerText = `$${player.cash}`;
+            document.getElementById('energyFillBar').style.width = `${player.energy}%`;
+            document.getElementById('healthFillBar').style.width = `${player.health}%`;
+            document.getElementById('happyFillBar').style.width = `${player.happy}%`;
+            document.getElementById('questItemCount').innerText = `1. ซื้อของแต่งบ้าน 4 ชิ้น (${player.furnitureCount}/4)`;
+        }
+
+        function setToast(txt) { document.getElementById('toastDisplay').innerText = `📍 ${txt}`; }
+
+        function showVictory() {
+            playSound('fanfare');
+            const all = [{ name: "NOVA (YOU)", vp: calculateVP(player) }, ...bots.map(b => ({ name: b.name, vp: calculateVP(b) }))].sort((a, b) => b.vp - a.vp);
+            const podium = document.getElementById('podiumRankList');
+            podium.innerHTML = all.map((p, i) => `
+                <div style="display:flex; justify-between; padding: 14px 20px; background: #1e293b; border-radius: 14px; margin-bottom: 10px; font-weight:900; color: #fbbf24; font-size: 16px;">
+                    <span>${i === 0 ? '👑 อันดับ 1' : `อันดับ ${i+1}`}: ${p.name}</span>
+                    <span>${p.vp} VP</span>
+                </div>
+            `).join('');
+
+            document.getElementById('victoryScreen').classList.add('show');
+        }
+    </script>
+</body>
+</html>
